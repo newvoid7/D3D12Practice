@@ -93,6 +93,7 @@ private:
     void BuildLandGeometry();
     void BuildWavesGeometry();
     void BuildPlaneGeometry();
+    void BuildCAOGeometry();
     void BuildPSOs();
     void BuildFrameResources();
     void BuildMaterials();
@@ -137,7 +138,7 @@ private:
     // Interact related
 
     // 0: look down; 1: from the plane
-    int mViewSet = 0;
+    int mViewMode = 0;
     XMFLOAT3 mPlanePos = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 mPlaneAngle = { 0.0f, 0.0f, 0.0f }; // pitch, yaw, roll
     bool mPlaneForward = false, mPlaneBackward = false,
@@ -145,12 +146,12 @@ private:
         mPlaneLift = false, mPlaneSink = false;
     float mPlaneSpeed = 0.05f;
     XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
-    //
+    // mode 0
     XMFLOAT3 mAtPos = { 0.0f, 0.0f, 0.0f };
     float mRadius = 100.0f;
     float mYaw = 0.0f;
     float mPitch = -XM_PIDIV4;
-    //
+    // mode 1
     float mAzimuth = 0.0f;
     float mElevation = 0.0f;
 

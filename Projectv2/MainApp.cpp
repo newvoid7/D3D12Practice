@@ -38,6 +38,7 @@ bool MainApp::Initialize()
 	BuildLandGeometry();
 	BuildWavesGeometry();
 	BuildPlaneGeometry();
+	BuildCAOGeometry();
 	BuildMaterials();
 	BuildRenderItems();
 	BuildFrameResources();
@@ -184,7 +185,7 @@ void MainApp::OnMouseMove(WPARAM btnState, int x, int y)
 {
 	float dx = XMConvertToRadians(static_cast<float>(x - mLastMousePos.x));
 	float dy = XMConvertToRadians(static_cast<float>(y - mLastMousePos.y));
-	if (mViewSet == 0) {
+	if (mViewMode == 0) {
 		if ((btnState & MK_LBUTTON) != 0) {
 			mAtPos.x += 1.2f * dy * cosf(mYaw) - 1.2f * dx * sinf(mYaw);
 			mAtPos.z += 1.2f * dx * cosf(mYaw) + 1.2f * dy * sinf(mYaw);
@@ -192,10 +193,10 @@ void MainApp::OnMouseMove(WPARAM btnState, int x, int y)
 		else if ((btnState & MK_RBUTTON) != 0) {
 		}
 		else if ((btnState & MK_MBUTTON) != 0) {
-			mYaw += 0.2f * dx;
+			mYaw -= 0.2f * dx;
 		}
 	}
-	else if (mViewSet == 1) {
+	else if (mViewMode == 1) {
 		mAzimuth -= 360.0f * dy / mClientWidth;
 		mElevation -= 90.0f * dx / mClientHeight;
 		mElevation = MathHelper::Clamp(mElevation, -80.0f, 80.0f);
@@ -207,7 +208,7 @@ void MainApp::OnMouseMove(WPARAM btnState, int x, int y)
 void MainApp::OnMouseWheel(WPARAM wheel)
 {
 	short d = (short)HIWORD(wheel) / WHEEL_DELTA;
-	if (mViewSet == 0) {
+	if (mViewMode == 0) {
 		mRadius -= 1.8f * d;
 	}
 	mRadius = MathHelper::Clamp(mRadius, 5.0f, 250.0f);
@@ -235,9 +236,9 @@ void MainApp::OnKeyDown(WPARAM key)
 		mPlaneSink = true;
 		break;
 	case VK_TAB:
-		mViewSet = 1 - mViewSet;
+		mViewMode = 1 - mViewMode;
 	case VK_SPACE:
-		if (mViewSet == 0) {
+		if (mViewMode == 0) {
 			float dx = mEyePos.x - mAtPos.x, 
 				dy = mEyePos.y - mAtPos.y, 
 				dz = mEyePos.z - mAtPos.z;
@@ -249,25 +250,25 @@ void MainApp::OnKeyDown(WPARAM key)
 			mEyePos.z = mAtPos.z + dz;
 		}
 	case VK_UP:
-		if (mViewSet == 0) {
+		if (mViewMode == 0) {
 			mAtPos.x += 1.0f * cosf(mYaw);
 			mAtPos.z += 1.0f * sinf(mYaw);
 		}
 		break;
 	case VK_DOWN:
-		if (mViewSet == 0) {
+		if (mViewMode == 0) {
 			mAtPos.x -= 1.0f * cosf(mYaw);
 			mAtPos.z -= 1.0f * sinf(mYaw);
 		}
 		break;
 	case VK_LEFT:
-		if (mViewSet == 0) {
+		if (mViewMode == 0) {
 			mAtPos.x -= 1.0f * sinf(mYaw);
 			mAtPos.z += 1.0f * cosf(mYaw);
 		}
 		break;
 	case VK_RIGHT:
-		if (mViewSet == 0) {
+		if (mViewMode == 0) {
 			mAtPos.x += 1.0f * sinf(mYaw);
 			mAtPos.z -= 1.0f * cosf(mYaw);
 		}
@@ -312,11 +313,12 @@ void MainApp::OnKeyUp(WPARAM key)
 
 void MainApp::UpdateCamera(const GameTimer& gt)
 {
-	if (mViewSet == 0) {
+	if (mViewMode == 0) {
 		// Convert Spherical to Cartesian coordinates.
 		mEyePos.x = mAtPos.x + mRadius * sinf(mPitch) * cosf(mYaw);
 		mEyePos.z = mAtPos.z + mRadius * sinf(mPitch) * sinf(mYaw);
 		mEyePos.y = mAtPos.y + mRadius * cosf(mPitch);
+		//mEyePos = { 0.0f, mRadius, 0.0f };
 
 		// Build the view matrix.
 		XMVECTOR pos = XMVectorSet(mEyePos.x, mEyePos.y, mEyePos.z, 1.0f);
@@ -326,7 +328,7 @@ void MainApp::UpdateCamera(const GameTimer& gt)
 		XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
 		XMStoreFloat4x4(&mView, view);
 	}
-	else if (mViewSet == 1) {
+	else if (mViewMode == 1) {
 		mEyePos.x = mPlanePos.x;
 		mEyePos.y = mPlanePos.y + 12.0f;
 		mEyePos.z = mPlanePos.z;
@@ -481,8 +483,8 @@ void MainApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 
 	XMFLOAT3 sunDirection = {
-		0.707106f * sinf(1.0f * gt.TotalTime()),
-		-0.707106f * cosf(1.0f * gt.TotalTime()),
+		0.707106f * sinf(0.8f * gt.TotalTime()),
+		-0.707106f * cosf(0.8f * gt.TotalTime()),
 		0.707106f
 	};
 
@@ -545,16 +547,24 @@ void MainApp::LoadTextures()
 		mCommandList.Get(), waterTex->Filename.c_str(),
 		waterTex->Resource, waterTex->UploadHeap));
 
-	auto fenceTex = std::make_unique<Texture>();
-	fenceTex->Name = "fenceTex";
-	fenceTex->Filename = L"../../Textures/WoodCrate01.dds";
+	auto planeTex = std::make_unique<Texture>();
+	planeTex->Name = "planeTex";
+	planeTex->Filename = L"../../Textures/plane.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
-		mCommandList.Get(), fenceTex->Filename.c_str(),
-		fenceTex->Resource, fenceTex->UploadHeap));
+		mCommandList.Get(), planeTex->Filename.c_str(),
+		planeTex->Resource, planeTex->UploadHeap));
+
+	auto caoTex = std::make_unique<Texture>();
+	caoTex->Name = "caoTex";
+	caoTex->Filename = L"../../Textures/other.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), caoTex->Filename.c_str(),
+		caoTex->Resource, caoTex->UploadHeap));
 
 	mTextures[grassTex->Name] = std::move(grassTex);
 	mTextures[waterTex->Name] = std::move(waterTex);
-	mTextures[fenceTex->Name] = std::move(fenceTex);
+	mTextures[planeTex->Name] = std::move(planeTex);
+	mTextures[caoTex->Name] = std::move(caoTex);
 }
 
 void MainApp::BuildRootSignature()
@@ -603,7 +613,7 @@ void MainApp::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 3;
+	srvHeapDesc.NumDescriptors = 4;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
@@ -615,7 +625,8 @@ void MainApp::BuildDescriptorHeaps()
 
 	auto grassTex = mTextures["grassTex"]->Resource;
 	auto waterTex = mTextures["waterTex"]->Resource;
-	auto fenceTex = mTextures["fenceTex"]->Resource;
+	auto planeTex = mTextures["planeTex"]->Resource;
+	auto caoTex = mTextures["caoTex"]->Resource;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -634,8 +645,15 @@ void MainApp::BuildDescriptorHeaps()
 	// next descriptor
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
-	srvDesc.Format = fenceTex->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
+	srvDesc.Format = planeTex->GetDesc().Format;
+	md3dDevice->CreateShaderResourceView(planeTex.Get(), &srvDesc, hDescriptor);
+
+	// next descriptor
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+
+	srvDesc.Format = caoTex->GetDesc().Format;
+	md3dDevice->CreateShaderResourceView(caoTex.Get(), &srvDesc, hDescriptor);
+
 }
 
 void MainApp::BuildShadersAndInputLayout()
@@ -780,6 +798,54 @@ void MainApp::BuildPlaneGeometry()
 	mGeometries["planeGeo"] = std::move(geo);
 }
 
+void MainApp::BuildCAOGeometry()
+{
+	MeshData cao;
+	cao.ReadMeshFile(L"..\\..\\..\\model\\blender_grass.obj");
+
+	std::vector<Vertex> vertices(cao.VertexCount());
+	std::vector<std::uint16_t> indices = cao.GetIndices();
+	size_t i = 0;
+	for (auto& v : vertices) {
+		v.Pos = cao.GetPositions()[i];
+		v.Normal = cao.GetNormals()[i];
+		v.TexC = cao.GetTexC()[i];
+		++i;
+	}
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = "caoGeo";
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
+		mCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+
+	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
+		mCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+
+	geo->VertexByteStride = sizeof(Vertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["cao"] = submesh;
+
+	mGeometries["caoGeo"] = std::move(geo);
+}
+
 void MainApp::BuildPSOs()
 {
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
@@ -842,17 +908,26 @@ void MainApp::BuildMaterials()
 	water->FresnelR0 = XMFLOAT3(0.2f, 0.2f, 0.2f);
 	water->Roughness = 0.0f;
 
-	auto wirefence = std::make_unique<Material>();
-	wirefence->Name = "wirefence";
-	wirefence->MatCBIndex = 2;
-	wirefence->DiffuseSrvHeapIndex = 2;
-	wirefence->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	wirefence->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-	wirefence->Roughness = 0.25f;
+	auto plane = std::make_unique<Material>();
+	plane->Name = "plane";
+	plane->MatCBIndex = 2;
+	plane->DiffuseSrvHeapIndex = 2;
+	plane->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	plane->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	plane->Roughness = 0.25f;
+
+	auto cao = std::make_unique<Material>();
+	cao->Name = "cao";
+	cao->MatCBIndex = 3;
+	cao->DiffuseSrvHeapIndex = 3;
+	cao->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	cao->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	cao->Roughness = 0.05f;
 
 	mMaterials["grass"] = std::move(grass);
 	mMaterials["water"] = std::move(water);
-	mMaterials["wirefence"] = std::move(wirefence);
+	mMaterials["plane"] = std::move(plane);
+	mMaterials["cao"] = std::move(cao);
 }
 
 void MainApp::BuildRenderItems()
@@ -874,6 +949,7 @@ void MainApp::BuildRenderItems()
 	wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
 	mWavesRitem = wavesRitem.get();
 	mRitemLayer[(int)RenderLayer::Opaque].push_back(wavesRitem.get());
+	mAllRitems.push_back(std::move(wavesRitem));
 
 	auto terrainRitem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&terrainRitem->World,
@@ -891,6 +967,7 @@ void MainApp::BuildRenderItems()
 	terrainRitem->StartIndexLocation = terrainRitem->Geo->DrawArgs["grid"].StartIndexLocation;
 	terrainRitem->BaseVertexLocation = terrainRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
 	mRitemLayer[(int)RenderLayer::Opaque].push_back(terrainRitem.get());
+	mAllRitems.push_back(std::move(terrainRitem));
 
 	auto planeRitem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&planeRitem->World,
@@ -900,16 +977,31 @@ void MainApp::BuildRenderItems()
 		)
 	);
 	planeRitem->ObjCBIndex = 2;
-	planeRitem->Mat = mMaterials["wirefence"].get();
+	planeRitem->Mat = mMaterials["plane"].get();
 	planeRitem->Geo = mGeometries["planeGeo"].get();
 	planeRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	planeRitem->IndexCount = planeRitem->Geo->DrawArgs["plane"].IndexCount;
 	planeRitem->StartIndexLocation = planeRitem->Geo->DrawArgs["plane"].StartIndexLocation;
 	planeRitem->BaseVertexLocation = planeRitem->Geo->DrawArgs["plane"].BaseVertexLocation;
 	mRitemLayer[(int)RenderLayer::Opaque].push_back(planeRitem.get());
-	mAllRitems.push_back(std::move(wavesRitem));
-	mAllRitems.push_back(std::move(terrainRitem));
 	mAllRitems.push_back(std::move(planeRitem));
+
+	auto caoRitem = std::make_unique<RenderItem>();
+	XMStoreFloat4x4(&caoRitem->World,
+		XMMatrixMultiply(
+			XMMatrixScaling(1.0f, 1.0f, 1.0f),
+			XMMatrixTranslation(30.0f, 10.0f, -45.0f)
+		)
+	);
+	caoRitem->ObjCBIndex = 3;
+	caoRitem->Mat = mMaterials["cao"].get();
+	caoRitem->Geo = mGeometries["caoGeo"].get();
+	caoRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	caoRitem->IndexCount = caoRitem->Geo->DrawArgs["cao"].IndexCount;
+	caoRitem->StartIndexLocation = caoRitem->Geo->DrawArgs["cao"].StartIndexLocation;
+	caoRitem->BaseVertexLocation = caoRitem->Geo->DrawArgs["cao"].BaseVertexLocation;
+	mRitemLayer[(int)RenderLayer::Opaque].push_back(caoRitem.get());
+	mAllRitems.push_back(std::move(caoRitem));
 }
 
 void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems)

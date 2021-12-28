@@ -23,19 +23,18 @@ protected:
     vector<XMFLOAT3> vertices_tangentu;
     vector<XMFLOAT2> vertices_texc;
     vector<std::uint16_t> indices;
+    vector<std::uint16_t> sub_indices;  // group of meshes
+    vector<wstring> mtl_names;
 public:
     MeshData() = default;
     void ReadMeshFile(const wstring& file_path);
 public:
     int VertexCount() const { return vertices_pos.size(); }
     int IndexCount() const { return indices.size(); }
-    void Border(XMFLOAT3 * min, XMFLOAT3 * max) {
+    void Border() {
         for (const auto& p : vertices_pos) {
             update_max_and_min(p);
         }
-        XMFLOAT3 ret_min = Min_pos, ret_max = Max_pos;
-        min = &ret_min;
-        max = &ret_max;
     };
     const vector<XMFLOAT3>& GetPositions() const { return vertices_pos; }
     const vector<XMFLOAT4>& GetColors() const { return vertices_color; }

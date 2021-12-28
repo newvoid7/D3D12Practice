@@ -162,15 +162,19 @@
     <ClCompile Include="MeshData.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\color.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </FxCompile>
     <FxCompile Include="Shaders\Default.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\LightingUtil.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\model\f117.stl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\Textures\grass.dds" />
+    <Image Include="..\..\Textures\water1.dds" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

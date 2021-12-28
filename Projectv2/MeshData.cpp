@@ -5,12 +5,12 @@
 #include "../../Common/MathHelper.h"
 #include "MeshData.h"
 
-using std::ifstream;
+using std::wifstream;
 using std::array;
 
-string omit_starting_blank(const string& source)
+wstring omit_starting_blank(const wstring& source)
 {
-	string::size_type i = 0;
+	wstring::size_type i = 0;
 	for (; i < source.size(); ++i) {
 		if (source[i] != ' ' && source[i] != '\t' && source[i] != '\n') {
 			break;
@@ -20,13 +20,13 @@ string omit_starting_blank(const string& source)
 }
 
 /// <summary>
-/// Check if starts_with certain prefix, and set the post to following substring.
+/// Check if starts_with certain prefix, and set the post to following subwstring.
 /// </summary>
 /// <param name="source"></param>
 /// <param name="start"></param>
 /// <param name="post"></param>
 /// <returns></returns>
-bool starts_with(const string& source, const string& start, string& post)
+bool starts_with(const wstring& source, const wstring& start, wstring& post)
 {
 	auto source_len = source.size(), start_len = start.size();
 	if (source_len >= start_len) {
@@ -55,12 +55,12 @@ bool ends_with(const wstring& source, const wstring& end)
 /// <param name="source"></param>
 /// <param name="delimiters"></param>
 /// <returns></returns>
-vector<string> split(const string& source, const string& delimiters)
+vector<wstring> split(const wstring& source, const wstring& delimiters)
 {
-	vector<string> tokens;
-	string::size_type last_pos = source.find_first_not_of(delimiters, 0);
-	string::size_type pos = source.find_first_of(delimiters, last_pos);
-	while (pos != string::npos || last_pos != string::npos) {
+	vector<wstring> tokens;
+	wstring::size_type last_pos = source.find_first_not_of(delimiters, 0);
+	wstring::size_type pos = source.find_first_of(delimiters, last_pos);
+	while (pos != wstring::npos || last_pos != wstring::npos) {
 		tokens.push_back(source.substr(last_pos, pos - last_pos));
 		last_pos = source.find_first_not_of(delimiters, pos);
 		pos = source.find_first_of(delimiters, last_pos);
@@ -68,7 +68,7 @@ vector<string> split(const string& source, const string& delimiters)
 	return tokens;
 }
 
-XMFLOAT2 parse_2_floats(const string& source, const string& delimiters)
+XMFLOAT2 parse_2_floats(const wstring& source, const wstring& delimiters)
 {
 	assert(!delimiters.empty());
 	auto float_strs = split(source, delimiters);
@@ -82,7 +82,7 @@ XMFLOAT2 parse_2_floats(const string& source, const string& delimiters)
 	return ret;
 }
 
-XMFLOAT3 parse_3_floats(const string& source, const string& delimiters)
+XMFLOAT3 parse_3_floats(const wstring& source, const wstring& delimiters)
 {
 	assert(!delimiters.empty());
 	auto float_strs = split(source, delimiters);
@@ -97,14 +97,15 @@ XMFLOAT3 parse_3_floats(const string& source, const string& delimiters)
 	return ret;
 }
 
-array<array<std::uint16_t, 3>, 3> parse_3x3_uints(const string& source, const string& del0, const string& del1)
+array<array<std::uint16_t, 3>, 3> parse_3x3_uints(const wstring& source, const wstring& del0, const wstring& del1)
 {
 	assert(!del0.empty());
 	auto uintx3_strs = split(source, del0);
 	if (uintx3_strs.size() < 3) {
 		throw "Not enough intx3.";
 	}
-	array<array<std::uint16_t, 3>, 3> ret{};
+	array<array<std::uint16_t, 3>, 3> ret;
+	ret.fill(array<std::uint16_t, 3> { UINT16_MAX, UINT16_MAX, UINT16_MAX });
 	for (int i = 0; i < 3; ++i) {
 		assert(!del1.empty());
 		auto s = split(uintx3_strs[i], del1);
@@ -153,7 +154,7 @@ void MeshData::compute_normals()
 /// <param name="file_path"></param>
 void MeshData::read_stl(const wstring& file_path)
 {
-	ifstream ifs(file_path, std::ios::in);
+	wifstream ifs(file_path, std::ios::in);
 	if (ifs.fail()) {
 		return;
 	}
@@ -162,16 +163,16 @@ void MeshData::read_stl(const wstring& file_path)
 	// Record how many faces does a vertex belong, 
 	// to compute the normal of this vertex
 	XMFLOAT3 curr_normal;
-	string line;
+	wstring line;
 	while (!ifs.eof()) {
 		std::getline(ifs, line);
-		string post_str;
+		wstring post_str;
 
-		if (starts_with(omit_starting_blank(line), "facet normal ", post_str)) {
-			curr_normal = parse_3_floats(post_str, " ");
+		if (starts_with(omit_starting_blank(line), L"facet normal ", post_str)) {
+			curr_normal = parse_3_floats(post_str, L" ");
 		}
-		else if (starts_with(omit_starting_blank(line), "vertex ", post_str)) {
-			XMFLOAT3 p = parse_3_floats(post_str, " ");
+		else if (starts_with(omit_starting_blank(line), L"vertex ", post_str)) {
+			XMFLOAT3 p = parse_3_floats(post_str, L" ");
 			auto find_iter = std::find_if(v_position.begin(), v_position.end(),
 				[p](XMFLOAT3 it) {return it.x == p.x && it.y == p.y && it.z == p.z; });
 			// If there doesn't exists the same vertex
@@ -207,59 +208,60 @@ void MeshData::read_stl(const wstring& file_path)
 	}
 	// Compute TexC
 	vertices_texc.resize(VertexCount());
-	XMFLOAT3 min_border, max_border;
-	Border(&min_border, &max_border);
-	float dx = max_border.x - min_border.x, dy = max_border.y - min_border.y;
 	for (size_t i = 0; i < VertexCount(); ++i) {
-		vertices_texc[i].x = (vertices_pos[i].x - min_border.x) / dx;
-		vertices_texc[i].y = (vertices_pos[i].y - min_border.y) / dy;
+		vertices_texc[i].x = (vertices_pos[i].y + 1) / 2;
+		vertices_texc[i].y = 1 - (vertices_pos[i].x + 1) / 2;
 	}
 }
 
 void MeshData::read_obj(const wstring& file_path)
 {
-	ifstream ifs(file_path, std::ios::in);
-	vector<XMFLOAT3> v_position, v_normal;
-	vector<XMFLOAT2> v_texture;
-	vector<std::uint16_t> v_index, v_tindex, v_nindex;
-	string mtl_path;
-	string line;
+	wifstream ifs(file_path, std::ios::in);
+	vector<std::uint16_t> n_index, t_index;
+	vector<XMFLOAT3> v_normal;
+	vector<XMFLOAT2> v_texc;
+	wstring mtl_path;
+	wstring line;
 	while (!ifs.eof()) {
 		std::getline(ifs, line);
-		string post_str;
-		if (starts_with(line, "#", post_str)) {
+		wstring post_str;
+		if (starts_with(line, L"#", post_str)) {
 			continue;
 		}
 		else {
-			if (starts_with(line, "v ", post_str)) {
-				XMFLOAT3 p = parse_3_floats(post_str, " ");
+			if (starts_with(line, L"v ", post_str)) {
+				XMFLOAT3 p = parse_3_floats(post_str, L" ");
 				update_max_and_min(p);
-				v_position.push_back(p);
+				vertices_pos.push_back(p);
 			}
-			else if (starts_with(line, "vn ", post_str)) {
-				XMFLOAT3 p = parse_3_floats(post_str, " ");
+			else if (starts_with(line, L"vn ", post_str)) {
+				XMFLOAT3 p = parse_3_floats(post_str, L" ");
 				v_normal.push_back(p);
 			}
-			else if (starts_with(line, "vt ", post_str)) {
-				XMFLOAT2 p = parse_2_floats(post_str, " ");
-				v_texture.push_back(p);
+			else if (starts_with(line, L"vt ", post_str)) {
+				XMFLOAT2 p = parse_2_floats(post_str, L" ");
+				v_texc.push_back(p);
 			}
-			else if (starts_with(line, "f ", post_str)) {
-				auto p = parse_3x3_uints(post_str, " ", "/");
-				v_index.push_back(p[0][0]);
-				v_index.push_back(p[1][0]);
-				v_index.push_back(p[2][0]);
-				v_tindex.push_back(p[0][1]);
-				v_tindex.push_back(p[1][1]);
-				v_tindex.push_back(p[2][1]);
+			else if (starts_with(line, L"f ", post_str)) {
+				auto p = parse_3x3_uints(post_str, L" ", L"/");
+				indices.push_back(p[0][0] - 1);
+				indices.push_back(p[1][0] - 1);
+				indices.push_back(p[2][0] - 1);
+				t_index.push_back(p[0][1] - 1);
+				t_index.push_back(p[1][1] - 1);
+				t_index.push_back(p[2][1] - 1);
+				n_index.push_back(p[0][2] - 1);
+				n_index.push_back(p[1][2] - 1);
+				n_index.push_back(p[2][2] - 1);
 			}
-			else if (starts_with(line, "mtllib ", post_str)) {
+			else if (starts_with(line, L"mtllib ", post_str)) {
 				mtl_path = post_str;
 			}
-			else if (starts_with(line, "usemtl ", post_str)) {
+			else if (starts_with(line, L"usemtl ", post_str)) {
 
 			}
-			else if (starts_with(line, "o ", post_str)) {
+			else if (starts_with(line, L"o ", post_str)
+				|| starts_with(line, L"s ", post_str)) {
 
 			}
 			else {
@@ -267,8 +269,14 @@ void MeshData::read_obj(const wstring& file_path)
 			}
 		}
 	}
-	vertices_pos = std::move(v_position);
-	indices = std::move(v_index);
+	vertices_normal.resize(VertexCount());
+	vertices_texc.resize(VertexCount());
+	concurrency::parallel_for(0, int(indices.size()), [this, v_normal, v_texc, n_index, t_index](int i) {
+		vertices_normal[indices[i]] = n_index[i] != (UINT16_MAX - 1) ? 
+			v_normal[n_index[i]] : XMFLOAT3(0.0f, 0.0f, 0.0f);
+		vertices_texc[indices[i]] = t_index[i] != (UINT16_MAX-1) ? 
+			v_texc[t_index[i]] : XMFLOAT2(0.0f, 0.0f);
+	});
 }
 
 void MeshData::generate_grid(int num_x, int num_z)
