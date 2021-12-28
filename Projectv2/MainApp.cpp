@@ -187,8 +187,8 @@ void MainApp::OnMouseMove(WPARAM btnState, int x, int y)
 	float dy = XMConvertToRadians(static_cast<float>(y - mLastMousePos.y));
 	if (mViewMode == 0) {
 		if ((btnState & MK_LBUTTON) != 0) {
-			mAtPos.x += 1.2f * dy * cosf(mYaw) - 1.2f * dx * sinf(mYaw);
-			mAtPos.z += 1.2f * dx * cosf(mYaw) + 1.2f * dy * sinf(mYaw);
+			mAtPos.x += 1.5f * dy * cosf(mYaw) - 1.5f * dx * sinf(mYaw);
+			mAtPos.z += 1.5f * dx * cosf(mYaw) + 1.5f * dy * sinf(mYaw);
 		}
 		else if ((btnState & MK_RBUTTON) != 0) {
 		}
@@ -235,8 +235,12 @@ void MainApp::OnKeyDown(WPARAM key)
 	case 'E':
 		mPlaneSink = true;
 		break;
+	case VK_SHIFT:
+		mShiftPressed = true;
+		break;
 	case VK_TAB:
 		mViewMode = 1 - mViewMode;
+		break;
 	case VK_SPACE:
 		if (mViewMode == 0) {
 			float dx = mEyePos.x - mAtPos.x, 
@@ -249,6 +253,7 @@ void MainApp::OnKeyDown(WPARAM key)
 			mEyePos.y = mAtPos.y + dy;
 			mEyePos.z = mAtPos.z + dz;
 		}
+		break;
 	case VK_UP:
 		if (mViewMode == 0) {
 			mAtPos.x += 1.0f * cosf(mYaw);
@@ -299,6 +304,9 @@ void MainApp::OnKeyUp(WPARAM key)
 		break;
 	case 'E':
 		mPlaneSink = false;
+		break;
+	case VK_SHIFT:
+		mShiftPressed = false;
 		break;
 	case VK_ESCAPE:
 		PostQuitMessage(0);
@@ -352,23 +360,45 @@ void MainApp::UpdatePlane(const GameTimer& gt)
 	if (mPlaneForward || mPlaneBackward
 		|| mPlaneLeftward || mPlaneRightward
 		|| mPlaneLift || mPlaneSink) {
-		if (mPlaneForward) {
-			mPlanePos.x += mPlaneSpeed;
+		if (!mShiftPressed) {
+			if (mPlaneForward) {
+				mPlanePos.x += mPlaneSpeed;
+			}
+			if (mPlaneBackward) {
+				mPlanePos.x -= mPlaneSpeed;
+			}
+			if (mPlaneLeftward) {
+				mPlanePos.z += mPlaneSpeed;
+			}
+			if (mPlaneRightward) {
+				mPlanePos.z -= mPlaneSpeed;
+			}
+			if (mPlaneLift) {
+				mPlanePos.y += mPlaneSpeed;
+			}
+			if (mPlaneSink) {
+				mPlanePos.y -= mPlaneSpeed;
+			}
 		}
-		if (mPlaneBackward) {
-			mPlanePos.x -= mPlaneSpeed;
-		}
-		if (mPlaneLeftward) {
-			mPlanePos.z += mPlaneSpeed;
-		}
-		if (mPlaneRightward) {
-			mPlanePos.z -= mPlaneSpeed;
-		}
-		if (mPlaneLift) {
-			mPlanePos.y += mPlaneSpeed;
-		}
-		if (mPlaneSink) {
-			mPlanePos.y -= mPlaneSpeed;
+		else {
+			if (mPlaneForward) {
+				mPlaneAngle.y += mPlaneRotateSpeed;
+			}
+			if (mPlaneBackward) {
+				mPlaneAngle.y -= mPlaneRotateSpeed;
+			}
+			if (mPlaneLeftward) {
+				mPlaneAngle.z -= mPlaneRotateSpeed;
+			}
+			if (mPlaneRightward) {
+				mPlaneAngle.z += mPlaneRotateSpeed;
+			}
+			if (mPlaneLift) {
+				mPlaneAngle.x += mPlaneRotateSpeed;
+			}
+			if (mPlaneSink) {
+				mPlaneAngle.x -= mPlaneRotateSpeed;
+			}
 		}
 		// Important!
 		mAllRitems[2]->NumFramesDirty = gNumFrameResources;
@@ -411,13 +441,15 @@ void MainApp::UpdateObjectCBs(const GameTimer& gt)
 			XMMATRIX world = XMLoadFloat4x4(&e->World);
 			XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
 
-			world = XMMatrixMultiply(
-				world,
-				XMMatrixMultiply(
-					XMMatrixTranslation(mPlanePos.x, mPlanePos.y, mPlanePos.z),
-					XMMatrixRotationRollPitchYaw(mPlaneAngle.x, mPlaneAngle.y, mPlaneAngle.z)
-				)
-			);
+			if (e->Geo->Name == "planeGeo") {
+				world = XMMatrixMultiply(
+					XMMatrixRotationRollPitchYaw(mPlaneAngle.x, mPlaneAngle.y, mPlaneAngle.z),
+					XMMatrixMultiply(
+						world,
+						XMMatrixTranslation(mPlanePos.x, mPlanePos.y, mPlanePos.z)
+					)
+				);
+			}
 
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));

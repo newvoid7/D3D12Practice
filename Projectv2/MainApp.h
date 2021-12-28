@@ -144,7 +144,8 @@ private:
     bool mPlaneForward = false, mPlaneBackward = false,
         mPlaneLeftward = false, mPlaneRightward = false,
         mPlaneLift = false, mPlaneSink = false;
-    float mPlaneSpeed = 0.05f;
+    bool mShiftPressed = false;
+    float mPlaneSpeed = 0.05f, mPlaneRotateSpeed = 0.01f;
     XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
     // mode 0
     XMFLOAT3 mAtPos = { 0.0f, 0.0f, 0.0f };
