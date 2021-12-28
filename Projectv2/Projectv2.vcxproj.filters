@@ -45,6 +45,9 @@
     <ClInclude Include="FrameResource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\d3dApp.cpp">
@@ -95,5 +98,16 @@
     <Image Include="..\..\Textures\water1.dds">
       <Filter>资源文件</Filter>
     </Image>
+    <Image Include="..\..\Textures\other.dds">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="..\..\Textures\plane.dds">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="..\..\..\model\blender_grass.obj">
+      <Filter>资源文件</Filter>
+    </Object>
   </ItemGroup>
 </Project>

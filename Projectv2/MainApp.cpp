@@ -1,5 +1,6 @@
 #include "MainApp.h"
 #include "MeshData.h"
+//#define DEBUG
 
 const int gNumFrameResources = 3;
 
@@ -312,7 +313,8 @@ void MainApp::OnKeyUp(WPARAM key)
 		PostQuitMessage(0);
 		break;
 	case VK_F2:
-		Set4xMsaaState(!m4xMsaaState);
+		//TODO
+		// Set4xMsaaState(!m4xMsaaState);
 		break;
 	default:
 		break;
@@ -567,28 +569,48 @@ void MainApp::LoadTextures()
 {
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
+#ifdef DEBUG
 	grassTex->Filename = L"../../Textures/grass.dds";
+#endif // DEBUG
+#ifndef DEBUG
+	grassTex->Filename = L"Data/grass.dds";
+#endif // !DEBUG
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
 
 	auto waterTex = std::make_unique<Texture>();
 	waterTex->Name = "waterTex";
+#ifdef DEBUG
 	waterTex->Filename = L"../../Textures/water1.dds";
+#endif // DEBUG
+#ifndef DEBUG
+	waterTex->Filename = L"Data/water1.dds";
+#endif // !DEBUG
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), waterTex->Filename.c_str(),
 		waterTex->Resource, waterTex->UploadHeap));
 
 	auto planeTex = std::make_unique<Texture>();
 	planeTex->Name = "planeTex";
+#ifdef DEBUG
 	planeTex->Filename = L"../../Textures/plane.dds";
+#endif // DEBUG
+#ifndef DEBUG
+	planeTex->Filename = L"Data/plane.dds";
+#endif // !DEBUG
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), planeTex->Filename.c_str(),
 		planeTex->Resource, planeTex->UploadHeap));
 
 	auto caoTex = std::make_unique<Texture>();
 	caoTex->Name = "caoTex";
+#ifdef DEBUG
 	caoTex->Filename = L"../../Textures/other.dds";
+#endif // DEBUG
+#ifndef DEBUG
+	caoTex->Filename = L"Data/other.dds";
+#endif // !DEBUG
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), caoTex->Filename.c_str(),
 		caoTex->Resource, caoTex->UploadHeap));
@@ -690,8 +712,14 @@ void MainApp::BuildDescriptorHeaps()
 
 void MainApp::BuildShadersAndInputLayout()
 {
+#ifdef DEBUG
 	mShaders["standardVS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", nullptr, "VS", "vs_5_0");
 	mShaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", nullptr, "PS", "ps_5_0");
+#endif // DEBUG
+#ifndef DEBUG
+	mShaders["standardVS"] = d3dUtil::CompileShader(L"Data\\Default.hlsl", nullptr, "VS", "vs_5_0");
+	mShaders["opaquePS"] = d3dUtil::CompileShader(L"Data\\Default.hlsl", nullptr, "PS", "ps_5_0");
+#endif // !DEBUG
 
 	mInputLayout =
 	{
@@ -785,8 +813,12 @@ void MainApp::BuildWavesGeometry()
 void MainApp::BuildPlaneGeometry()
 {
 	MeshData plane;
+#ifdef DEBUG
 	plane.ReadMeshFile(L"..\\..\\..\\model\\f117.stl");
-
+#endif // DEBUG
+#ifndef DEBUG
+	plane.ReadMeshFile(L"Data\\f117.stl");
+#endif // !DEBUG
 	std::vector<Vertex> vertices(plane.VertexCount());
 	std::vector<std::uint16_t> indices = plane.GetIndices();
 	size_t i = 0;
@@ -833,8 +865,12 @@ void MainApp::BuildPlaneGeometry()
 void MainApp::BuildCAOGeometry()
 {
 	MeshData cao;
+#ifdef DEBUG
 	cao.ReadMeshFile(L"..\\..\\..\\model\\blender_grass.obj");
-
+#endif // DEBUG
+#ifndef DEBUG
+	cao.ReadMeshFile(L"Data\\blender_grass.obj");
+#endif // !DEBUG
 	std::vector<Vertex> vertices(cao.VertexCount());
 	std::vector<std::uint16_t> indices = cao.GetIndices();
 	size_t i = 0;
